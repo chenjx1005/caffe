@@ -12,6 +12,7 @@
 #include "caffe/common.hpp"
 #include "caffe/data_transformer.hpp"
 #include "caffe/filler.hpp"
+#include "caffe/integer_blob.hpp"
 #include "caffe/internal_thread.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/net.hpp"
@@ -98,6 +99,66 @@ class DataLayer : public BasePrefetchingDataLayer<Dtype> {
 
  protected:
   virtual void InternalThreadEntry();
+
+  shared_ptr<db::DB> db_;
+  shared_ptr<db::Cursor> cursor_;
+};
+
+/**
+ * @brief Provides regular blob data + index data.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template<typename Dtype>
+class IndexDataLayer : public Layer<Dtype>, public InternalThread {
+ public:
+  explicit IndexDataLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {
+  }
+  virtual ~IndexDataLayer();
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+                          const vector<Blob<Dtype>*>& top);
+
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+                       const vector<Blob<Dtype>*>& top) {
+  }
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+                           const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+                           const vector<Blob<Dtype>*>& top);
+
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+        const vector<bool>& propagate_down,
+        const vector<Blob<Dtype>*>& bottom) {}
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+        const vector<bool>& propagate_down,
+        const vector<Blob<Dtype>*>& bottom) {}
+
+  virtual inline const char* type() const { return "IndexData"; }
+  virtual inline int ExactNumBottomBlobs() const {
+    return 0;
+  }
+  virtual inline int MinTopBlobs() const {
+    return 1;
+  }
+  virtual inline int MaxTopBlobs() const {
+    return 2;
+  }
+
+ protected:
+  virtual void CreatePrefetchThread();
+  virtual void JoinPrefetchThread();
+  virtual void InternalThreadEntry();
+
+  int window_size;
+  int height_data;
+
+  bool output_labels_;
+
+  shared_ptr<IntegerBlob<Dtype> > prefetch_data_;
+  shared_ptr<IntegerBlob<Dtype> > prefetch_data_copy_;
+  shared_ptr<Blob<Dtype> > prefetch_label_;
+  shared_ptr<Blob<Dtype> > prefetch_label_copy_;
 
   shared_ptr<db::DB> db_;
   shared_ptr<db::Cursor> cursor_;

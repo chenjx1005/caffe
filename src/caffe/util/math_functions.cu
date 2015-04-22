@@ -68,14 +68,14 @@ void caffe_gpu_gemv<double>(const CBLAS_TRANSPOSE TransA, const int M,
 
 template <>
 void caffe_gpu_axpy<float>(const int N, const float alpha, const float* X,
-    float* Y) {
-  CUBLAS_CHECK(cublasSaxpy(Caffe::cublas_handle(), N, &alpha, X, 1, Y, 1));
+    float* Y, const int ldx, const int ldy) {
+  CUBLAS_CHECK(cublasSaxpy(Caffe::cublas_handle(), N, &alpha, X, ldx, Y, ldy));
 }
 
 template <>
 void caffe_gpu_axpy<double>(const int N, const double alpha, const double* X,
-    double* Y) {
-  CUBLAS_CHECK(cublasDaxpy(Caffe::cublas_handle(), N, &alpha, X, 1, Y, 1));
+    double* Y, const int ldx, const int ldy) {
+  CUBLAS_CHECK(cublasDaxpy(Caffe::cublas_handle(), N, &alpha, X, ldx, Y, ldy));
 }
 
 void caffe_gpu_memcpy(const size_t N, const void* X, void* Y) {

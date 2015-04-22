@@ -2,6 +2,10 @@
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
+<<<<<<< HEAD
+=======
+#include "caffe/integer_blob.hpp"
+>>>>>>> Sparse data support in inner product with corresponding sparse data layer
 #include "caffe/layer.hpp"
 #include "caffe/layer_factory.hpp"
 #include "caffe/proto/caffe.pb.h"
@@ -167,6 +171,12 @@ Blob<Dtype>* GetTopBlob(const shared_ptr<LayerParameter>& param, int pos) {
   if (param->type() == "SparseData") {
     if (pos == 0) {
       return new SparseBlob<Dtype>();
+    } else {
+      return new Blob<Dtype>();
+    }
+  } else if (param->type() == "IndexData") {
+    if (pos == 0) {
+      return new IntegerBlob<Dtype>();
     } else {
       return new Blob<Dtype>();
     }
