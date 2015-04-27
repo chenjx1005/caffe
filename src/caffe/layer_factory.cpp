@@ -2,10 +2,7 @@
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
-<<<<<<< HEAD
-=======
 #include "caffe/integer_blob.hpp"
->>>>>>> Sparse data support in inner product with corresponding sparse data layer
 #include "caffe/layer.hpp"
 #include "caffe/layer_factory.hpp"
 #include "caffe/proto/caffe.pb.h"
@@ -167,27 +164,41 @@ REGISTER_LAYER_CREATOR(TanH, GetTanHLayer);
 // Layers that use their constructor as their default creator should be
 // registered in their corresponding cpp files. Do not registere them here.
 template<typename Dtype>
-Blob<Dtype>* GetTopBlob(const shared_ptr<LayerParameter>& param, int pos) {
-  if (param->type() == "SparseData") {
-    if (pos == 0) {
-      return new SparseBlob<Dtype>();
-    } else {
-      return new Blob<Dtype>();
+Blob<Dtype>* GetTopBlob(const shared_ptr<LayerParameter>& param, int pos,  NetParameter_BlobType type) {
+
+  if (param) {
+    if (param->type() == "SparseData") {
+      if (pos == 0) {
+        return new SparseBlob<Dtype>();
+      } else {
+        return new Blob<Dtype>();
+      }
+    } else if (param->type() == "IndexData") {
+      if (pos == 0) {
+        return new IntegerBlob<Dtype>();
+      } else {
+        return new Blob<Dtype>();
+      }
     }
-  } else if (param->type() == "IndexData") {
-    if (pos == 0) {
-      return new IntegerBlob<Dtype>();
-    } else {
-      return new Blob<Dtype>();
-    }
+  } else {
+    switch (type) {
+      case NetParameter_BlobType_D:
+          return new Blob<Dtype>();
+      case NetParameter_BlobType_SD:
+        return new SparseBlob<Dtype>();
+      case NetParameter_BlobType_ID:
+        return new IntegerBlob<Dtype>();
+      default:
+          LOG(FATAL) << "Unknown BlobType: " << type;
+      }
   }
   return new Blob<Dtype>();
 }
 
 template Blob<float>* GetTopBlob(const shared_ptr<LayerParameter>& param,
-                                 int pos);
+                                 int pos,  NetParameter_BlobType type);
 template Blob<double>* GetTopBlob(const shared_ptr<LayerParameter>& param,
-                                  int pos);
+                                  int pos,  NetParameter_BlobType type);
 
 #ifdef WITH_PYTHON_LAYER
 template <typename Dtype>

@@ -46,8 +46,6 @@ message SparseDatum {
   repeated float data = 5 [packed=true];
 }
 
-<<<<<<< HEAD
-=======
 // A data point containing text encoded in a sequnce of integers each representing a token
 // each token can have an array of float attached to it of size height_data
 // the data array is of size size * height_data
@@ -63,7 +61,6 @@ message IndexDatum {
   optional int32 n_multi_label = 8;
 }
 
->>>>>>> Sparse data support in inner product with corresponding sparse data layer
 message FillerParameter {
   // The filler type.
   optional string type = 1 [default = 'constant'];
@@ -83,7 +80,14 @@ message NetParameter {
   repeated string input = 3;
   // The shape of the input blobs.
   repeated BlobShape input_shape = 8;
-
+  // The type of the input blobs. If nothing is specified the are assumed to be Datum
+  enum BlobType {
+    D = 0; // datum
+    SD = 1; // sparse datum
+    ID = 2; // index datu,
+  }
+  repeated BlobType input_type = 9;
+  
   // 4D input dimensions -- deprecated.  Use "shape" instead.
   // If specified, for each input blob there should be four
   // values specifying the num, channels, height and width of the input blob.
@@ -285,11 +289,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-<<<<<<< HEAD
-// LayerParameter next available layer-specific ID: 133 (last added: sparse_data_param)
-=======
 // LayerParameter next available layer-specific ID: 135 (last added: lookup_table_param)
->>>>>>> Sparse data support in inner product with corresponding sparse data layer
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -765,8 +765,6 @@ message SparseDataParameter {
   optional DataParameter.DB backend = 4 [default = LEVELDB];
 }
 
-<<<<<<< HEAD
-=======
 message IndexDataParameter {
   // Specify the data source.
   optional string source = 1;
@@ -781,7 +779,6 @@ message LookupTableParameter {
 	optional FillerParameter weight_filler = 3; // The filler for the weight
 }
 
->>>>>>> Sparse data support in inner product with corresponding sparse data layer
 // Message that stores parameters used by TanHLayer
 message TanHParameter {
   enum Engine {

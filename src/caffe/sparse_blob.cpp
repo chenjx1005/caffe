@@ -52,7 +52,15 @@ void SparseBlob<Dtype>::Reshape(const int num, const int channels,
 
 template<typename Dtype>
 void SparseBlob<Dtype>::Reshape(const vector<int>& shape) {
-  Reshape(shape, 1);
+  CHECK_GE(shape.size(), 2);
+  for( int i = 2; i < shape.size(); i++) {
+    CHECK_EQ(shape[i], 1);
+  }
+  vector<int> newshape(2);
+  newshape[0] = shape[0];
+  newshape[1] = shape[1];
+
+  Reshape(newshape, 1);
 }
 
 template<typename Dtype>

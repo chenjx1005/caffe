@@ -465,7 +465,7 @@ void Layer<Dtype>::ToProto(LayerParameter* param, bool write_diff) {
 }
 
 template <typename Dtype>
-Blob<Dtype>* GetTopBlob(const shared_ptr<LayerParameter>& param, int pos);
+Blob<Dtype>* GetTopBlob(const shared_ptr<LayerParameter>& param, int pos, NetParameter_BlobType type);
 
 }  // namespace caffe
 
