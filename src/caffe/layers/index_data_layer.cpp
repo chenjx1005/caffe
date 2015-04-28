@@ -31,7 +31,7 @@ void IndexDataLayer<Dtype>::JoinPrefetchThread() {
 template<typename Dtype>
 void IndexDataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                                       const vector<Blob<Dtype>*>& top) {
-  if (top.size() == 1) {
+  if (top.size() == MinTopBlobs()) {
     output_labels_ = false;
   } else {
     output_labels_ = true;
@@ -59,6 +59,7 @@ void IndexDataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   shape_vec[2] = window_size;
 
   top[0]->Reshape(shape_vec);
+  top[1]->Reshape(shape_vec);
 
   this->prefetch_data_->Reshape(shape_vec);
   this->prefetch_data_copy_->Reshape(shape_vec);
@@ -68,7 +69,7 @@ void IndexDataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   if (this->output_labels_) {
     vector<int> shape_label(1,
                this->layer_param_.index_data_param().batch_size());
-    top[1]->Reshape(shape_label);
+    top[2]->Reshape(shape_label);
     this->prefetch_label_->Reshape(shape_label);
     this->prefetch_label_copy_->Reshape(shape_label);
   }
@@ -140,10 +141,11 @@ void IndexDataLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   CreatePrefetchThread();
 
   top[0]->ShareData(*prefetch_data_copy_.get());
+  top[1]->ShareData(*prefetch_data_copy_.get());
 
   if (output_labels_) {
     caffe_copy(prefetch_label_copy_->count(), prefetch_label_copy_->cpu_data(),
-               top[1]->mutable_cpu_data());
+               top[2]->mutable_cpu_data());
   }
 }
 

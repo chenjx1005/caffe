@@ -17,7 +17,11 @@ void LookupTableLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   SIZE_ = this->layer_param_.lookup_table_param().size();
   // Figure out the dimensions
   const vector<int> bottom_shape = bottom[0]->shape();
-  CHECK_EQ(bottom_shape.size(), 3);
+  CHECK_GE(bottom_shape.size(), 3);
+  for (int i = 3; i < bottom_shape.size(); i++) {
+      CHECK_EQ(bottom_shape[i], 1);
+  }
+
   NUM_ = bottom_shape[0];
   INPUT_SIZE_ = bottom_shape[2];
 

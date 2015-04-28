@@ -139,10 +139,10 @@ class IndexDataLayer : public Layer<Dtype>, public InternalThread {
     return 0;
   }
   virtual inline int MinTopBlobs() const {
-    return 1;
+    return 2;
   }
   virtual inline int MaxTopBlobs() const {
-    return 2;
+    return 3;
   }
 
  protected:

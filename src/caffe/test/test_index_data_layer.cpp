@@ -25,6 +25,7 @@ class IndexDataLayerTest : public MultiDeviceTest<TypeParam> {
   IndexDataLayerTest()
       : backend_(DataParameter_DB_LEVELDB),
         blob_top_data_(new IntegerBlob<Dtype>()),
+        blob_top_data2_(new IntegerBlob<Dtype>()),
         blob_top_label_(new Blob<Dtype>()),
         seed_(1701) {}
   virtual void SetUp() {
@@ -32,6 +33,7 @@ class IndexDataLayerTest : public MultiDeviceTest<TypeParam> {
     MakeTempDir(filename_.get());
     *filename_ += "/db";
     blob_top_vec_.push_back(blob_top_data_);
+    blob_top_vec_.push_back(blob_top_data2_);
     blob_top_vec_.push_back(blob_top_label_);
   }
 
@@ -117,6 +119,7 @@ class IndexDataLayerTest : public MultiDeviceTest<TypeParam> {
   DataParameter_DB backend_;
   shared_ptr<string> filename_;
   IntegerBlob<Dtype>* const blob_top_data_;
+  IntegerBlob<Dtype>* const blob_top_data2_;
   Blob<Dtype>* const blob_top_label_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
   vector<Blob<Dtype>*> blob_top_vec_;

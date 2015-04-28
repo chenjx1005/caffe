@@ -263,6 +263,32 @@ struct NdarrayCallPoliciesIntIndices : public bp::default_call_policies {
   }
 };
 
+struct NdarrayCallPoliciesIntIndex : public bp::default_call_policies {
+  typedef NdarrayConverterGeneratorInt result_converter;
+  PyObject* postcall(PyObject* pyargs, PyObject* result) {
+    bp::object pyblob = bp::extract<bp::tuple>(pyargs)()[0];
+    shared_ptr<IntegerBlob<Dtype> > blob =
+      bp::extract<shared_ptr<IntegerBlob<Dtype> > >(pyblob);
+    // Free the temporary pointer-holding array, and construct a new one with
+    // the shape information from the blob.
+    void* data = PyArray_DATA(reinterpret_cast<PyArrayObject*>(result));
+    Py_DECREF(result);
+
+    vector<npy_intp> dims(2);
+    dims[0] = blob->shape()[0];
+    dims[1] = blob->shape()[2];
+    PyObject *arr_obj = PyArray_SimpleNewFromData(2, dims.data(),
+                                                  NPY_INT32, data);
+    // SetBaseObject steals a ref, so we need to INCREF.
+    Py_INCREF(pyblob.ptr());
+    PyArray_SetBaseObject(reinterpret_cast<PyArrayObject*>(arr_obj),
+        pyblob.ptr());
+    return arr_obj;
+  }
+};
+
+
+
 bp::object Blob_Reshape(bp::tuple args, bp::dict kwargs) {
   if (bp::len(kwargs) > 0) {
     throw std::runtime_error("Blob.reshape takes no kwargs");
@@ -364,7 +390,7 @@ BOOST_PYTHON_MODULE(_caffe) {
        boost::noncopyable>(
         "IntegerBlob", bp::no_init)
         .add_property("indices", bp::make_function(&IntegerBlob<Dtype>::mutable_cpu_indices,
-                                                   NdarrayCallPoliciesIntIndices()));
+                                                   NdarrayCallPoliciesIntIndex()));
 
 
   bp::class_<Layer<Dtype>, shared_ptr<PythonLayer<Dtype> >,

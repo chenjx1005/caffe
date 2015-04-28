@@ -10,8 +10,18 @@ namespace caffe {
 
 template<typename Dtype>
 void IntegerBlob<Dtype>::Reshape(const vector<int>& shape) {
-  CHECK_EQ(shape.size(), 3);
-  Blob<Dtype>::Reshape(shape);
+  CHECK_GE(shape.size(), 3);
+
+  for (int i = 3; i < shape.size(); i++) {
+    CHECK_EQ(shape[i], 1);
+  }
+  vector<int> newshape(4);
+  newshape[0] = shape[0];
+  newshape[1] = shape[1];
+  newshape[2] = shape[2];
+  newshape[3] = 1;
+
+  Blob<Dtype>::Reshape(newshape);
   if (this->count_ > 0) {
     LOG(INFO)<< "indices setup to" <<
     this->shape_[0] * this->shape_[2] << "\n\n";
