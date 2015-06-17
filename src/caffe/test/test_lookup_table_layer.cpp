@@ -59,6 +59,7 @@ TYPED_TEST(LookupTableLayerTest, TestSetUp) {
   EXPECT_EQ(this->blob_top_->height(), 3);
   EXPECT_EQ(this->blob_top_->width(), 1);
   EXPECT_EQ(this->blob_top_->channels(), 5);
+  EXPECT_EQ(this->blob_top_->num_axes(), 4);
 }
 
 TYPED_TEST(LookupTableLayerTest, TestForward) {

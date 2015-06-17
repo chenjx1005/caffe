@@ -174,7 +174,7 @@ Blob<Dtype>* GetTopBlob(const shared_ptr<LayerParameter>& param, int pos,  NetPa
         return new Blob<Dtype>();
       }
     } else if (param->type() == "IndexData") {
-      if (pos == 0) {
+      if (pos == 0 || pos == 1) {
         return new IntegerBlob<Dtype>();
       } else {
         return new Blob<Dtype>();

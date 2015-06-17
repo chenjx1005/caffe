@@ -82,6 +82,14 @@ class IndexDataLayerTest : public MultiDeviceTest<TypeParam> {
     EXPECT_EQ(blob_top_data_->channels(), 2);
     EXPECT_EQ(blob_top_data_->height(), 10);
     EXPECT_EQ(blob_top_data_->width(), 1);
+    EXPECT_EQ(blob_top_data_->num_axes(), 4);
+
+    EXPECT_EQ(blob_top_data2_->num(), 5);
+    EXPECT_EQ(blob_top_data2_->channels(), 2);
+    EXPECT_EQ(blob_top_data2_->height(), 10);
+    EXPECT_EQ(blob_top_data2_->width(), 1);
+    EXPECT_EQ(blob_top_data2_->num_axes(), 4);
+
     EXPECT_EQ(blob_top_label_->num(), 5);
     EXPECT_EQ(blob_top_label_->channels(), 1);
     EXPECT_EQ(blob_top_label_->height(), 1);
@@ -96,6 +104,9 @@ class IndexDataLayerTest : public MultiDeviceTest<TypeParam> {
         for (int j = 0; j < 10; ++j) {
            EXPECT_EQ((i+1) * j, blob_top_data_->cpu_indices()[j + i * 10])
                << "debug: iter " << iter << " i " << i << " j " << j;
+           EXPECT_EQ((i+1) * j, blob_top_data2_->cpu_indices()[j + i * 10])
+                          << "debug: iter " << iter << " i " << i << " j " << j;
+
         }
       }
       for (int i = 0; i < 5; ++i) {
@@ -106,6 +117,15 @@ class IndexDataLayerTest : public MultiDeviceTest<TypeParam> {
                  EXPECT_EQ(2 * j * i + 1,
                            blob_top_data_->cpu_data()[2* j + 1 + i * 20])
                     << "debug: iter " << iter << " i " << i << " j " << j;
+
+                 EXPECT_EQ(2 * j * i,
+                            blob_top_data2_->cpu_data()[2 * j + i * 20])
+                      << "debug: iter " << iter << " i " << i << " j " << j;
+                  EXPECT_EQ(2 * j * i + 1,
+                            blob_top_data2_->cpu_data()[2* j + 1 + i * 20])
+                     << "debug: iter " << iter << " i " << i << " j " << j;
+
+
               }
             }
     }
