@@ -79,7 +79,7 @@ void TxtPairDataLayer<Dtype>::ShuffleLines() {
 }
 
 template <typename Dtype>
-void TxtPairDataLayer<Dtype>::ParseLines(std::pair<sparse_data_line> line, Blob<Dtype>& data_blob, Dtype& label)
+void TxtPairDataLayer<Dtype>::ParseLines(std::pair<sparse_data_line, sparse_data_line> line, Blob<Dtype>& data_blob, Dtype& label)
 {
     Dtype* data = data_blob.mutable_cpu_data();
     vector<string> strs;
@@ -104,8 +104,8 @@ void TxtPairDataLayer<Dtype>::ParseLines(std::pair<sparse_data_line> line, Blob<
     float ctr = click / (click + noclick);
     boost::split(strs, line.second.first, boost::is_any_of(","));
     CHECK_EQ(strs.size(), 2);
-    Dtype noclick = atoi(strs[0].c_str());
-    Dtype click = atoi(strs[1].c_str());
+    noclick = atoi(strs[0].c_str());
+    click = atoi(strs[1].c_str());
     float ctr_p = click / (click + noclick);
     label = ctr > ctr_p ? 1 : 0;
 }
