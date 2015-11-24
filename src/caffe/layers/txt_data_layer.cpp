@@ -21,13 +21,8 @@ TxtDataLayer<Dtype>::~TxtDataLayer<Dtype>() {
 template <typename Dtype>
 void TxtDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  const int new_height = 1;
-  const int new_width  = 1;
   length_ = this->layer_param_.txt_data_param().length();
 
-  CHECK((new_height == 0 && new_width == 0) ||
-      (new_height > 0 && new_width > 0)) << "Current implementation requires "
-      "new_height and new_width to be set at the same time.";
   // Read the file with filenames and labels
   const string& source = this->layer_param_.txt_data_param().source();
   LOG(INFO) << "Opening file " << source;
@@ -84,15 +79,15 @@ template <typename Dtype>
 void TxtDataLayer<Dtype>::ParseLines(std::pair<std::string, std::string> line, Blob<Dtype>& data_blob, Dtype& label)
 {
     vector<string> strs;
-    boost::split(strs, line.first, boost::is_any_of(","));
+    boost::split(strs, line.second, boost::is_any_of(","));
     Dtype* data = data_blob.mutable_cpu_data();
     for (int i=0; i<strs.size(); i++)
     {
         int p = atoi(strs[i].c_str());
-        CHECK_GT(length_, p);
-        data[p] = 1;
+        CHECK_GE(length_, p);
+        data[p-1] = 1;
     }
-    boost::split(strs, line.second, boost::is_any_of(","));
+    boost::split(strs, line.first, boost::is_any_of(","));
     CHECK_EQ(strs.size(), 2);
     Dtype noclick = atoi(strs[0].c_str());
     Dtype click = atoi(strs[1].c_str());
@@ -101,7 +96,7 @@ void TxtDataLayer<Dtype>::ParseLines(std::pair<std::string, std::string> line, B
 
 // This function is called on prefetch thread
 template <typename Dtype>
-void ImageDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
+void TxtDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   CPUTimer batch_timer;
   batch_timer.Start();
   double trans_time = 0;
@@ -111,8 +106,6 @@ void ImageDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   TxtDataParameter txt_data_param = this->layer_param_.txt_data_param();
   const int batch_size = txt_data_param.batch_size();
   length_ = txt_data_param.length();
-  const int new_height = 1;
-  const int new_width = 1;
 
   vector<int> top_shape(4, 1);
   top_shape[1] = length_;
@@ -134,7 +127,7 @@ void ImageDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     // Apply transformations (mirror, crop...) to the image
     int offset = batch->data_.offset(item_id);
     this->transformed_data_.set_cpu_data(prefetch_data + offset);
-    ParseLines(lines_[lines_id_], this->transformed_data_, prefetch_label[item_id])
+    ParseLines(lines_[lines_id_], this->transformed_data_, prefetch_label[item_id]);
     trans_time += timer.MicroSeconds();
 
     // go to the next iter
@@ -157,4 +150,3 @@ INSTANTIATE_CLASS(TxtDataLayer);
 REGISTER_LAYER_CLASS(TxtData);
 
 }  // namespace caffe
-#endif  // USE_OPENCV
