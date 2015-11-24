@@ -1239,5 +1239,4 @@ message TxtDataParameter {
   optional uint32 batch_size = 2;
   optional uint32 length = 3;
   optional bool shuffle = 4 [default = false];
-  optional bool pair = 5 [default = false];
 }
