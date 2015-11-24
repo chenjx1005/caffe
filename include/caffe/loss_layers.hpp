@@ -44,7 +44,7 @@ class BiClassifyAccuracyLayer : public Layer<Dtype> {
   float threshold_;
   int postive_;
   int negative_;
-}
+};
 
 /**
  * @brief Computes the classification accuracy for a one-of-many

@@ -10,8 +10,8 @@ template <typename Dtype>
 void BiClassifyAccuracyLayer<Dtype>::LayerSetUp(
   const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   threshold_ = this->layer_param_.biclassify_accuracy_param().threshold();
-  postive_ = this->layer_param.biclassify_accuracy_param().postive();
-  negative_ = this->layer_param.biclassify_accuracy_param().negative();
+  postive_ = this->layer_param_.biclassify_accuracy_param().postive();
+  negative_ = this->layer_param_.biclassify_accuracy_param().negative();
 }
 
 template <typename Dtype>
