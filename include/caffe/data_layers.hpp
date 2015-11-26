@@ -308,13 +308,14 @@ public:
   virtual inline int ExactNumTopBlobs() const { return 2; }
 
 protected:
-  void ParseLines(std::pair<sparse_data_line, sparse_data_line> pair, Blob<Dtype>& data_blob, Dtype& label);
+  void ParseLines(std::pair<sparse_data_line, sparse_data_line> pair, Blob<Dtype>& data_blob, Dtype* label);
   virtual void load_batch(Batch<Dtype>* batch);
   shared_ptr<Caffe::RNG> prefetch_rng_;
   virtual void ShuffleLines();
   vector<std::pair<sparse_data_line, sparse_data_line> > lines_;
   int lines_id_;
   int length_;
+  bool pair_label_;
 };
 
 /**

@@ -22,6 +22,7 @@ template <typename Dtype>
 void TxtPairDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   length_ = this->layer_param_.txt_data_param().length();
+  pair_label_ = this->layer_param_.txt_data_param().pair_label();
 
   // Read the file with filenames and labels
   const string& source = this->layer_param_.txt_data_param().source();
@@ -64,7 +65,12 @@ void TxtPairDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
   // label
-  vector<int> label_shape(1, batch_size);
+  if (!pair_label_)
+    vector<int> label_shape(1, batch_size);
+  else {
+    vector<int> label_shape(2, batch_size);
+    label_shape[1] = 3;
+  }
   top[1]->Reshape(label_shape);
   for (int i = 0; i < this->PREFETCH_COUNT; ++i) {
     this->prefetch_[i].label_.Reshape(label_shape);
@@ -79,7 +85,7 @@ void TxtPairDataLayer<Dtype>::ShuffleLines() {
 }
 
 template <typename Dtype>
-void TxtPairDataLayer<Dtype>::ParseLines(std::pair<sparse_data_line, sparse_data_line> line, Blob<Dtype>& data_blob, Dtype& label)
+void TxtPairDataLayer<Dtype>::ParseLines(std::pair<sparse_data_line, sparse_data_line> line, Blob<Dtype>& data_blob, Dtype* label)
 {
     Dtype* data = data_blob.mutable_cpu_data();
     vector<string> strs;
@@ -107,7 +113,13 @@ void TxtPairDataLayer<Dtype>::ParseLines(std::pair<sparse_data_line, sparse_data
     noclick = atoi(strs[0].c_str());
     click = atoi(strs[1].c_str());
     float ctr_p = click / (click + noclick);
-    label = ctr > ctr_p ? 1 : 0;
+    if (!pair_label_)
+        *label = ctr > ctr_p ? 1 : 0;
+    else {
+        *label = ctr;
+        *(label+1) = ctr_p;
+        *(label+2) = ctr > ctr_p ? 1 : 0;
+    }
 }
 
 // This function is called on prefetch thread
@@ -143,7 +155,11 @@ void TxtPairDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     // Apply transformations (mirror, crop...) to the image
     int offset = batch->data_.offset(item_id);
     this->transformed_data_.set_cpu_data(prefetch_data + offset);
-    ParseLines(lines_[lines_id_], this->transformed_data_, prefetch_label[item_id]);
+    if (!pair_label_)
+        ParseLines(lines_[lines_id_], this->transformed_data_, prefetch_label+item_id);
+    else {
+        ParseLines(lines_[lines_id_], this->transformed_data_, prefetch_label+item_id*3);
+    }
     trans_time += timer.MicroSeconds();
 
     // go to the next iter
