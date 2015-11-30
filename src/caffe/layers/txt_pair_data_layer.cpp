@@ -65,11 +65,9 @@ void TxtPairDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
   // label
-  if (!pair_label_)
-    vector<int> label_shape(1, batch_size);
-  else {
-    vector<int> label_shape(2, batch_size);
-    label_shape[1] = 3;
+  vector<int> label_shape(1, batch_size);
+  if (pair_label_) {
+    label_shape.push_back(3);
   }
   top[1]->Reshape(label_shape);
   for (int i = 0; i < this->PREFETCH_COUNT; ++i) {
