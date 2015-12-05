@@ -33,7 +33,7 @@ message Datum {
   optional int32 width = 3;
   // the actual image data, in bytes
   optional bytes data = 4;
-  optional int32 label = 5;
+  optional float label = 5;
   // Optionally, the datum could also hold float data.
   repeated float float_data = 6;
   // If true data contains an encoded image that need to be decoded
@@ -336,7 +336,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 143 (last added: index_data__param)
+// LayerParameter next available layer-specific ID: 145 (last added: biclassify_accuracy__param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -424,6 +424,8 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  optional TxtDataParameter txt_data_param = 143;
+  optional BiClassifyAccuracy biclassify_accuracy_param = 144;
 }
 
 // Message that stores parameters used to apply transformation
@@ -1293,4 +1295,18 @@ message PReLUParameter {
   optional FillerParameter filler = 1;
   // Whether or not slope paramters are shared across channels.
   optional bool channel_shared = 2 [default = false];
+}
+
+message TxtDataParameter {
+  optional string source = 1;
+  optional uint32 batch_size = 2;
+  optional uint32 length = 3;
+  optional bool shuffle = 4 [default = false];
+  optional bool pair_label = 5 [default = false];
+}
+
+message BiClassifyAccuracy {
+    optional float threshold = 1 [default = 0];
+    optional int32 postive = 2 [default = 1];
+    optional int32 negative = 3 [default = 0];
 }

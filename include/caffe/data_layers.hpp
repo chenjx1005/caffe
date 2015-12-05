@@ -371,6 +371,65 @@ class ImageDataLayer : public BasePrefetchingDataLayer<Dtype> {
 };
 
 /**
+ * @brief Provides data to the Net from sparse txt files.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class TxtDataLayer : public BasePrefetchingDataLayer<Dtype> {
+ public:
+  explicit TxtDataLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~TxtDataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "TxtData"; }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 2; }
+
+protected:
+  void ParseLines(std::pair<std::string, std::string> line, Blob<Dtype>& data_blob, Dtype& label);
+  virtual void load_batch(Batch<Dtype>* batch);
+  shared_ptr<Caffe::RNG> prefetch_rng_;
+  virtual void ShuffleLines();
+
+  vector<std::pair<std::string, std::string> > lines_;
+  int lines_id_;
+  int length_;
+};
+
+/**
+ * @brief Provides data pair to the Net from sparse txt files.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class TxtPairDataLayer : public BasePrefetchingDataLayer<Dtype> {
+public:
+  typedef std::pair<std::string, std::string> sparse_data_line;
+  explicit TxtPairDataLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~TxtPairDataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "TxtPairData"; }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 2; }
+
+protected:
+  void ParseLines(std::pair<sparse_data_line, sparse_data_line> pair, Blob<Dtype>& data_blob, Dtype* label);
+  virtual void load_batch(Batch<Dtype>* batch);
+  shared_ptr<Caffe::RNG> prefetch_rng_;
+  virtual void ShuffleLines();
+  vector<std::pair<sparse_data_line, sparse_data_line> > lines_;
+  int lines_id_;
+  int length_;
+  bool pair_label_;
+};
+
+/**
  * @brief Provides data to the Net from memory.
  *
  * TODO(dox): thorough documentation for Forward and proto params.
