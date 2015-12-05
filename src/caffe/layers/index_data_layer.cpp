@@ -20,12 +20,12 @@ IndexDataLayer<Dtype>::~IndexDataLayer<Dtype>() {
 
 template<typename Dtype>
 void IndexDataLayer<Dtype>::CreatePrefetchThread() {
-  CHECK(StartInternalThread()) << "Thread execution failed";
+  StartInternalThread();
 }
 
 template<typename Dtype>
 void IndexDataLayer<Dtype>::JoinPrefetchThread() {
-  CHECK(WaitForInternalThreadToExit()) << "Thread joining failed";
+  StopInternalThread();
 }
 
 template<typename Dtype>

@@ -91,12 +91,12 @@ SparseDataLayer<Dtype>::~SparseDataLayer<Dtype>() {
 
 template<typename Dtype>
 void SparseDataLayer<Dtype>::CreatePrefetchThread() {
-  CHECK(StartInternalThread()) << "Thread execution failed";
+  StartInternalThread();
 }
 
 template<typename Dtype>
 void SparseDataLayer<Dtype>::JoinPrefetchThread() {
-  CHECK(WaitForInternalThreadToExit()) << "Thread joining failed";
+  StopInternalThread();
 }
 
 template<typename Dtype>

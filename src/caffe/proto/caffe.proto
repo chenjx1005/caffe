@@ -336,7 +336,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 141 (last added: lookup_table_param)
+// LayerParameter next available layer-specific ID: 143 (last added: index_data__param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -400,7 +400,7 @@ message LayerParameter {
   optional HDF5OutputParameter hdf5_output_param = 113;
   optional HingeLossParameter hinge_loss_param = 114;
   optional ImageDataParameter image_data_param = 115;
-  optional IndexDataParameter index_data_param = 133;
+  optional IndexDataParameter index_data_param = 142;
   optional InfogainLossParameter infogain_loss_param = 116;
   optional InnerProductParameter inner_product_param = 117;
   optional LogParameter log_param = 134;
@@ -419,7 +419,7 @@ message LayerParameter {
   optional SoftmaxParameter softmax_param = 125;
   optional SPPParameter spp_param = 132;
   optional SliceParameter slice_param = 126;
-  optional SparseDataParameter sparse_data_param = 132;
+  optional SparseDataParameter sparse_data_param = 141;
   optional TanHParameter tanh_param = 127;
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;

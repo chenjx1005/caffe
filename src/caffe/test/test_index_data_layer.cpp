@@ -1,6 +1,7 @@
 #include <string>
 #include <vector>
 
+#include "boost/scoped_ptr.hpp"
 #include "gtest/gtest.h"
 
 #include "caffe/blob.hpp"

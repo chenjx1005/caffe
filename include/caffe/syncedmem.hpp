@@ -58,7 +58,6 @@ class SyncedMemory {
   void set_cpu_data(void* data, int size=-1);
   void set_gpu_data(void* data, int size=-1);
   const void* gpu_data();
-  void set_gpu_data(void* data);
   void* mutable_cpu_data();
   void* mutable_gpu_data();
   enum SyncedHead { UNINITIALIZED, HEAD_AT_CPU, HEAD_AT_GPU, SYNCED };

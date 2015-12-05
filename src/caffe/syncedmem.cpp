@@ -79,7 +79,7 @@ inline void SyncedMemory::to_gpu() {
 
 void SyncedMemory::clear_data() {
   if (cpu_ptr_ && own_cpu_data_) {
-    CaffeFreeHost(cpu_ptr_);
+    CaffeFreeHost(cpu_ptr_, cpu_malloc_use_cuda_);
     cpu_ptr_ = NULL;
   }
 #ifndef CPU_ONLY
@@ -109,7 +109,7 @@ void SyncedMemory::set_cpu_data(void* data, int size) {
     size_ = size;
   }
   if (cpu_ptr_ && own_cpu_data_) {
-    CaffeFreeHost(cpu_ptr_);
+    CaffeFreeHost(cpu_ptr_, cpu_malloc_use_cuda_);
   }
   cpu_ptr_ = data;
   head_ = HEAD_AT_CPU;
