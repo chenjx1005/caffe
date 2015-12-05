@@ -66,6 +66,10 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
     CHECK_EQ(param.input_size(), param.input_shape_size())
         << "Exactly one input_shape must be specified per input.";
   }
+  if (param.input_type_size() > 0) {
+    CHECK_EQ(param.input_size(), param.input_type_size())
+        << "Exactly one input_type must be specified per input.";
+  }
   memory_used_ = 0;
   // set the input blobs
   for (int input_id = 0; input_id < param.input_size(); ++input_id) {
@@ -413,7 +417,12 @@ void Net<Dtype>::AppendTop(const NetParameter& param, const int layer_id,
         LOG(INFO) << "Input " << top_id << " -> " << blob_name;
       }
     }
-    shared_ptr<Blob<Dtype> > blob_pointer(new Blob<Dtype>());
+    NetParameter_BlobType type = NetParameter_BlobType_D;
+    if (layer_id < 0 && param.input_type_size() > 0) {
+       type = param.input_type(top_id);
+    }
+    shared_ptr<Blob<Dtype> > blob_pointer(GetTopBlob<Dtype>(layer_param, top_id, type));
+
     const int blob_id = blobs_.size();
     blobs_.push_back(blob_pointer);
     blob_names_.push_back(blob_name);

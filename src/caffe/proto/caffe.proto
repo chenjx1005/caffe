@@ -40,6 +40,29 @@ message Datum {
   optional bool encoded = 7 [default = false];
 }
 
+message SparseDatum {
+  optional int32 size = 1 [default = 0];
+  optional int32 nnz = 2 [default = 0];  //number of non zeros entries
+  repeated int32 indices = 3 [packed=true];
+  optional int32 label = 4;
+  repeated float data = 5 [packed=true];
+}
+
+// A data point containing text encoded in a sequnce of integers each representing a token
+// each token can have an array of float attached to it of size height_data
+// the data array is of size size * height_data
+// n_index is the size of the vocab
+message IndexDatum {
+  optional int32 n_index = 1;
+  optional int32 size = 2 [default = 0];
+  repeated int32 indices = 3 [packed=true];
+  optional int32 label = 4;
+  optional int32 height_data = 5 [default = 0];
+  repeated float data = 6 [packed=true];
+  repeated int32 multi_label = 7;
+  optional int32 n_multi_label = 8;
+}
+
 message FillerParameter {
   // The filler type.
   optional string type = 1 [default = 'constant'];
@@ -67,7 +90,14 @@ message NetParameter {
   repeated string input = 3;
   // The shape of the input blobs.
   repeated BlobShape input_shape = 8;
-
+  // The type of the input blobs. If nothing is specified the are assumed to be Datum
+  enum BlobType {
+    D = 0; // datum
+    SD = 1; // sparse datum
+    ID = 2; // index datu,
+  }
+  repeated BlobType input_type = 9;
+  
   // 4D input dimensions -- deprecated.  Use "shape" instead.
   // If specified, for each input blob there should be four
   // values specifying the num, channels, height and width of the input blob.
@@ -306,7 +336,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 140 (last added: batch_norm_param)
+// LayerParameter next available layer-specific ID: 141 (last added: lookup_table_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -370,9 +400,11 @@ message LayerParameter {
   optional HDF5OutputParameter hdf5_output_param = 113;
   optional HingeLossParameter hinge_loss_param = 114;
   optional ImageDataParameter image_data_param = 115;
+  optional IndexDataParameter index_data_param = 133;
   optional InfogainLossParameter infogain_loss_param = 116;
   optional InnerProductParameter inner_product_param = 117;
   optional LogParameter log_param = 134;
+  optional LookupTableParameter lookup_table_param = 140;
   optional LRNParameter lrn_param = 118;
   optional MemoryDataParameter memory_data_param = 119;
   optional MVNParameter mvn_param = 120;
@@ -387,6 +419,7 @@ message LayerParameter {
   optional SoftmaxParameter softmax_param = 125;
   optional SPPParameter spp_param = 132;
   optional SliceParameter slice_param = 126;
+  optional SparseDataParameter sparse_data_param = 132;
   optional TanHParameter tanh_param = 127;
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
@@ -964,6 +997,34 @@ message SoftmaxParameter {
   optional int32 axis = 2 [default = 1];
 }
 
+message SparseDataParameter {
+  // Specify the data source.
+  optional string source = 1;
+  // Specify the batch size. Size is the number of columns in the data.
+  optional uint32 batch_size = 2;
+  // The rand_skip variable is for the data layer to skip a few data points
+  // to avoid all asynchronous sgd clients to start at the same point. The skip
+  // point would be set as rand_skip * rand(0,1). Note that rand_skip should not
+  // be larger than the number of keys in the leveldb.
+  optional uint32 rand_skip = 3 [default = 0];
+  optional DataParameter.DB backend = 4 [default = LEVELDB];
+}
+
+message IndexDataParameter {
+  // Specify the data source.
+  optional string source = 1;
+  // Specify the batch size.
+  optional uint32 batch_size = 2;
+  optional DataParameter.DB backend = 3 [default = LEVELDB];
+}
+
+message LookupTableParameter {
+	optional uint32 n_index = 1;
+	optional uint32 size = 2;
+	optional FillerParameter weight_filler = 3; // The filler for the weight
+}
+
+// Message that stores parameters used by TanHLayer
 message TanHParameter {
   enum Engine {
     DEFAULT = 0;
@@ -1121,6 +1182,7 @@ message V1LayerParameter {
   optional SigmoidParameter sigmoid_param = 38;
   optional SoftmaxParameter softmax_param = 39;
   optional SliceParameter slice_param = 31;
+  optional SparseDataParameter sparse_data_param = 43;
   optional TanHParameter tanh_param = 37;
   optional ThresholdParameter threshold_param = 25;
   optional WindowDataParameter window_data_param = 20;
