@@ -54,6 +54,7 @@ inline void SyncedMemory::to_gpu() {
   case UNINITIALIZED:
     CUDA_CHECK(cudaGetDevice(&gpu_device_));
     CUDA_CHECK(cudaMalloc(&gpu_ptr_, size_));
+    own_gpu_data_ = true;
     caffe_gpu_memset(size_, 0, gpu_ptr_);
     head_ = HEAD_AT_GPU;
     own_gpu_data_ = true;
@@ -76,15 +77,39 @@ inline void SyncedMemory::to_gpu() {
 #endif
 }
 
+void SyncedMemory::clear_data() {
+  if (cpu_ptr_ && own_cpu_data_) {
+    CaffeFreeHost(cpu_ptr_);
+    cpu_ptr_ = NULL;
+  }
+#ifndef CPU_ONLY
+  if (gpu_ptr_ && own_gpu_data_) {
+    int initial_device;
+    cudaGetDevice(&initial_device);
+    if (gpu_device_ != -1) {
+      CUDA_CHECK(cudaSetDevice(gpu_device_));
+    }
+    CUDA_CHECK(cudaFree(gpu_ptr_));
+    cudaSetDevice(initial_device);
+    gpu_ptr_ = NULL;
+  }
+#endif  // CPU_ONLY
+  head_ = UNINITIALIZED;
+}
+
 const void* SyncedMemory::cpu_data() {
   to_cpu();
   return (const void*)cpu_ptr_;
 }
 
-void SyncedMemory::set_cpu_data(void* data) {
+void SyncedMemory::set_cpu_data(void* data, int size) {
   CHECK(data);
-  if (own_cpu_data_) {
-    CaffeFreeHost(cpu_ptr_, cpu_malloc_use_cuda_);
+  if (size != -1 && size_ != size) {
+    clear_data();
+    size_ = size;
+  }
+  if (cpu_ptr_ && own_cpu_data_) {
+    CaffeFreeHost(cpu_ptr_);
   }
   cpu_ptr_ = data;
   head_ = HEAD_AT_CPU;
@@ -100,10 +125,14 @@ const void* SyncedMemory::gpu_data() {
 #endif
 }
 
-void SyncedMemory::set_gpu_data(void* data) {
+void SyncedMemory::set_gpu_data(void* data, int size) {
 #ifndef CPU_ONLY
   CHECK(data);
-  if (own_gpu_data_) {
+  if (size != -1 && size_ != size) {
+    clear_data();
+    size_ = size;
+  }
+  if (gpu_ptr_ && own_gpu_data_) {
     int initial_device;
     cudaGetDevice(&initial_device);
     if (gpu_device_ != -1) {

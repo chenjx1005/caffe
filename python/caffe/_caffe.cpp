@@ -15,6 +15,8 @@
 #include <fstream>  // NOLINT
 
 #include "caffe/caffe.hpp"
+#include "caffe/integer_blob.hpp"
+#include "caffe/sparse_blob.hpp"
 #include "caffe/python_layer.hpp"
 #include "caffe/sgd_solvers.hpp"
 
@@ -155,6 +157,25 @@ struct NdarrayConverterGenerator::apply<Dtype*> {
   };
 };
 
+struct NdarrayConverterGeneratorInt {
+  template <typename T> struct apply;
+};
+
+template <>
+struct NdarrayConverterGeneratorInt::apply<int*> {
+  struct type {
+    PyObject* operator() (int* data) const {
+      // Just store the data pointer, and add the shape information in postcall.
+      return PyArray_SimpleNewFromData(0, NULL, NPY_INT32, data);
+    }
+    const PyTypeObject* get_pytype() {
+      return &PyArray_Type;
+    }
+  };
+};
+
+
+
 struct NdarrayCallPolicies : public bp::default_call_policies {
   typedef NdarrayConverterGenerator result_converter;
   PyObject* postcall(PyObject* pyargs, PyObject* result) {
@@ -176,6 +197,98 @@ struct NdarrayCallPolicies : public bp::default_call_policies {
     return arr_obj;
   }
 };
+
+struct NdarrayCallPoliciesSparse : public bp::default_call_policies {
+  typedef NdarrayConverterGenerator result_converter;
+  PyObject* postcall(PyObject* pyargs, PyObject* result) {
+    bp::object pyblob = bp::extract<bp::tuple>(pyargs)()[0];
+    shared_ptr<Blob<Dtype> > blob =
+      bp::extract<shared_ptr<Blob<Dtype> > >(pyblob);
+    // Free the temporary pointer-holding array, and construct a new one with
+    // the shape information from the blob.
+    void* data = PyArray_DATA(reinterpret_cast<PyArrayObject*>(result));
+    Py_DECREF(result);
+    const int size = blob->data()->size() / sizeof(Dtype);
+    vector<npy_intp> dims(1, size);
+    PyObject *arr_obj = PyArray_SimpleNewFromData(1, dims.data(),
+                                                  NPY_FLOAT32, data);
+    // SetBaseObject steals a ref, so we need to INCREF.
+    Py_INCREF(pyblob.ptr());
+    PyArray_SetBaseObject(reinterpret_cast<PyArrayObject*>(arr_obj),
+        pyblob.ptr());
+    return arr_obj;
+  }
+};
+
+struct NdarrayCallPoliciesIntPtr : public bp::default_call_policies {
+  typedef NdarrayConverterGeneratorInt result_converter;
+  PyObject* postcall(PyObject* pyargs, PyObject* result) {
+    bp::object pyblob = bp::extract<bp::tuple>(pyargs)()[0];
+    shared_ptr<SparseBlob<Dtype> > blob =
+      bp::extract<shared_ptr<SparseBlob<Dtype> > >(pyblob);
+    // Free the temporary pointer-holding array, and construct a new one with
+    // the shape information from the blob.
+    void* data = PyArray_DATA(reinterpret_cast<PyArrayObject*>(result));
+    Py_DECREF(result);
+    const int size = blob->shape()[0]+ 1; //number of rows + 1
+        vector<npy_intp> dims(1, size);
+    PyObject *arr_obj = PyArray_SimpleNewFromData(1, dims.data(),
+                                                  NPY_INT32, data);
+    // SetBaseObject steals a ref, so we need to INCREF.
+    Py_INCREF(pyblob.ptr());
+    PyArray_SetBaseObject(reinterpret_cast<PyArrayObject*>(arr_obj),
+        pyblob.ptr());
+    return arr_obj;
+  }
+};
+
+struct NdarrayCallPoliciesIntIndices : public bp::default_call_policies {
+  typedef NdarrayConverterGeneratorInt result_converter;
+  PyObject* postcall(PyObject* pyargs, PyObject* result) {
+    bp::object pyblob = bp::extract<bp::tuple>(pyargs)()[0];
+    shared_ptr<SparseBlob<Dtype> > blob =
+      bp::extract<shared_ptr<SparseBlob<Dtype> > >(pyblob);
+    // Free the temporary pointer-holding array, and construct a new one with
+    // the shape information from the blob.
+    void* data = PyArray_DATA(reinterpret_cast<PyArrayObject*>(result));
+    Py_DECREF(result);
+    const int size = blob->indices()->size() / sizeof(int);
+        vector<npy_intp> dims(1, size);
+    PyObject *arr_obj = PyArray_SimpleNewFromData(1, dims.data(),
+                                                  NPY_INT32, data);
+    // SetBaseObject steals a ref, so we need to INCREF.
+    Py_INCREF(pyblob.ptr());
+    PyArray_SetBaseObject(reinterpret_cast<PyArrayObject*>(arr_obj),
+        pyblob.ptr());
+    return arr_obj;
+  }
+};
+
+struct NdarrayCallPoliciesIntIndex : public bp::default_call_policies {
+  typedef NdarrayConverterGeneratorInt result_converter;
+  PyObject* postcall(PyObject* pyargs, PyObject* result) {
+    bp::object pyblob = bp::extract<bp::tuple>(pyargs)()[0];
+    shared_ptr<IntegerBlob<Dtype> > blob =
+      bp::extract<shared_ptr<IntegerBlob<Dtype> > >(pyblob);
+    // Free the temporary pointer-holding array, and construct a new one with
+    // the shape information from the blob.
+    void* data = PyArray_DATA(reinterpret_cast<PyArrayObject*>(result));
+    Py_DECREF(result);
+
+    vector<npy_intp> dims(2);
+    dims[0] = blob->shape()[0];
+    dims[1] = blob->shape()[2];
+    PyObject *arr_obj = PyArray_SimpleNewFromData(2, dims.data(),
+                                                  NPY_INT32, data);
+    // SetBaseObject steals a ref, so we need to INCREF.
+    Py_INCREF(pyblob.ptr());
+    PyArray_SetBaseObject(reinterpret_cast<PyArrayObject*>(arr_obj),
+        pyblob.ptr());
+    return arr_obj;
+  }
+};
+
+
 
 bp::object Blob_Reshape(bp::tuple args, bp::dict kwargs) {
   if (bp::len(kwargs) > 0) {
@@ -202,6 +315,23 @@ bp::object BlobVec_add_blob(bp::tuple args, bp::dict kwargs) {
     shape[i - 1] = bp::extract<int>(args[i]);
   }
   self->push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(shape)));
+  // We need to explicitly return None to use bp::raw_function.
+  return bp::object();
+}
+
+bp::object Blob_Reshape_Sparse(bp::tuple args, bp::dict kwargs) {
+  if (bp::len(kwargs) > 0) {
+    throw std::runtime_error("SparseBlob.reshape takes no kwargs");
+  }
+  if (bp::len(args) != 4) {
+    throw std::runtime_error("SparseBlob.reshape takes exactly 4 arguments, the SparseBlob the eight and width and the number of non zero entries");
+  }
+  SparseBlob<Dtype>* self = bp::extract<SparseBlob<Dtype>*>(args[0]);
+  vector<int> shape(2);
+  shape[0] = bp::extract<int>(args[1]);
+  shape[1] = bp::extract<int>(args[2]);
+  int nnz = bp::extract<int>(args[3]);
+  self->Reshape(shape, nnz);
   // We need to explicitly return None to use bp::raw_function.
   return bp::object();
 }
@@ -266,6 +396,27 @@ BOOST_PYTHON_MODULE(_caffe) {
           NdarrayCallPolicies()))
     .add_property("diff",     bp::make_function(&Blob<Dtype>::mutable_cpu_diff,
           NdarrayCallPolicies()));
+
+  bp::class_<SparseBlob<Dtype>, bp::bases<Blob<Dtype> >,
+     shared_ptr<SparseBlob<Dtype> >,
+     boost::noncopyable>(
+      "SparseBlob", bp::no_init)
+      .def("reshape",           bp::raw_function(&Blob_Reshape_Sparse))
+      .add_property("nnz",    &SparseBlob<Dtype>::nnz)
+      .add_property("data",     bp::make_function(&SparseBlob<Dtype>::mutable_cpu_data,
+                NdarrayCallPoliciesSparse()))
+      .add_property("indices", bp::make_function(&SparseBlob<Dtype>::mutable_cpu_indices,
+                                                 NdarrayCallPoliciesIntIndices()))
+      .add_property("ptr",     bp::make_function(&SparseBlob<Dtype>::mutable_cpu_ptr,
+                                                 NdarrayCallPoliciesIntPtr()));
+
+  bp::class_<IntegerBlob<Dtype>, bp::bases<Blob<Dtype> >,
+       shared_ptr<IntegerBlob<Dtype> >,
+       boost::noncopyable>(
+        "IntegerBlob", bp::no_init)
+        .add_property("indices", bp::make_function(&IntegerBlob<Dtype>::mutable_cpu_indices,
+                                                   NdarrayCallPoliciesIntIndex()));
+
 
   bp::class_<Layer<Dtype>, shared_ptr<PythonLayer<Dtype> >,
     boost::noncopyable>("Layer", bp::init<const LayerParameter&>())

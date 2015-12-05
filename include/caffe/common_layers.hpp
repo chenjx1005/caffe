@@ -7,6 +7,7 @@
 #include "caffe/blob.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
+#include "caffe/sparse_blob.hpp"
 
 namespace caffe {
 
@@ -504,6 +505,34 @@ class InnerProductLayer : public Layer<Dtype> {
 };
 
 /**
+ * @brief Also known as a "fully-connected" layer, computes an inner product
+ *        with a set of learned weights, and (optionally) adds biases.
+ *        This layer also support sparse data (SparseBlob) as input
+ *
+ * TODO(dox): thorough documentation for Forward, Backward, and proto params.
+ */
+template<typename Dtype>
+class SparseInnerProductLayer : public InnerProductLayer<Dtype> {
+ public:
+  explicit SparseInnerProductLayer(const LayerParameter& param)
+      : InnerProductLayer<Dtype>(param) {}
+
+  virtual inline const char* type() const { return "SparseInnerProduct"; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+                           const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+                           const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+                            const vector<bool>& propagate_down,
+                            const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+                            const vector<bool>& propagate_down,
+                            const vector<Blob<Dtype>*>& bottom);
+};
+
+/**
  * @brief Normalizes the input to have 0-mean and/or unit (1) variance.
  *
  * TODO(dox): thorough documentation for Forward, Backward, and proto params.
@@ -783,6 +812,7 @@ class SliceLayer : public Layer<Dtype> {
 };
 
 /**
+<<<<<<< HEAD
  * @brief Copy a Blob along specified dimensions.
  */
 template <typename Dtype>
@@ -811,6 +841,45 @@ class TileLayer : public Layer<Dtype> {
   unsigned int axis_, tiles_, outer_dim_, inner_dim_;
 };
 
+/**
+* @brief LookupTable the input is a vector containing the indices of the vectors to be looked up.
+ *   The output is a concatenation of those vectors. The layer parameter specifies the number of vectors in the table and their size
+ *
+ * TODO(dox): thorough documentation for Forward, Backward, and proto params.
+ */
+template <typename Dtype>
+class LookupTableLayer : public Layer<Dtype> {
+ public:
+  explicit LookupTableLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "LookupTable"; }
+
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+        const vector<Blob<Dtype>*>& top) {}
+
+  virtual inline int ExactNumBottomBlobs() const { return 1; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+                           const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+                           const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+                            const vector<bool>& propagate_down,
+                            const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+                            const vector<bool>& propagate_down,
+                            const vector<Blob<Dtype>*>& bottom);
+
+  int NUM_;
+  int INPUT_SIZE_;
+  int N_INDEX_;
+  int SIZE_;
+};
 }  // namespace caffe
 
 #endif  // CAFFE_COMMON_LAYERS_HPP_
