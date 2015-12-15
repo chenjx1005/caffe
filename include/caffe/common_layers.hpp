@@ -518,6 +518,9 @@ class SparseInnerProductLayer : public InnerProductLayer<Dtype> {
       : InnerProductLayer<Dtype>(param) {}
 
   virtual inline const char* type() const { return "SparseInnerProduct"; }
+  virtual inline bool AllowForceBackward(const int bottom_index) const {
+    return false;
+  }
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
