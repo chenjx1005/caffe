@@ -336,7 +336,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 145 (last added: biclassify_accuracy__param)
+// LayerParameter next available layer-specific ID: 146 (last added: bn_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -426,6 +426,7 @@ message LayerParameter {
   optional WindowDataParameter window_data_param = 129;
   optional TxtDataParameter txt_data_param = 143;
   optional BiClassifyAccuracy biclassify_accuracy_param = 144;
+  optional BNParameter bn_param = 145;
 }
 
 // Message that stores parameters used to apply transformation
@@ -1309,4 +1310,13 @@ message BiClassifyAccuracy {
     optional float threshold = 1 [default = 0];
     optional int32 postive = 2 [default = 1];
     optional int32 negative = 3 [default = 0];
+}
+
+// Message that stores parameters used by BNLayer
+message BNParameter {
+  optional FillerParameter scale_filler = 1; // The filler for the scale
+  optional FillerParameter shift_filler = 2; // The filler for the shift
+  optional float var_eps = 3 [default = 1e-10]; // The epsilon added to variance
+  optional bool moving_average = 4 [default = true]; // whether or not using moving average for inference
+  optional float decay = 5 [default = 0.95]; // The decay factor for moving average
 }
