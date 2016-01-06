@@ -1318,5 +1318,5 @@ message BNParameter {
   optional FillerParameter shift_filler = 2; // The filler for the shift
   optional float var_eps = 3 [default = 1e-10]; // The epsilon added to variance
   optional bool moving_average = 4 [default = true]; // whether or not using moving average for inference
-  optional float decay = 5 [default = 0.95]; // The decay factor for moving average
+  optional float decay = 5 [default = 0.05]; // The decay factor for moving average
 }
