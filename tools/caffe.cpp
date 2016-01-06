@@ -236,7 +236,12 @@ int test() {
   }
   // Instantiate the caffe net.
   Net<float> caffe_net(FLAGS_model, caffe::TEST);
-  caffe_net.CopyTrainedLayersFrom(FLAGS_weights);
+  std::vector<std::string> model_names;
+  boost::split(model_names, FLAGS_weights, boost::is_any_of(",") );
+  for (int i = 0; i < model_names.size(); ++i) {
+    LOG(INFO) << "Finetuning from " << model_names[i];
+    caffe_net.CopyTrainedLayersFrom(model_names[i]);
+  }
   LOG(INFO) << "Running for " << FLAGS_iterations << " iterations.";
 
   vector<Blob<float>* > bottom_vec;
