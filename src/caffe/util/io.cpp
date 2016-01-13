@@ -116,7 +116,7 @@ static bool matchExt(const std::string & fn,
   return false;
 }
 
-bool ReadImageToDatum(const string& filename, const int label,
+bool ReadImageToDatum(const string& filename, const float label,
     const int height, const int width, const bool is_color,
     const std::string & encoding, Datum* datum) {
   cv::Mat cv_img = ReadImageToCVMat(filename, height, width, is_color);
@@ -142,7 +142,7 @@ bool ReadImageToDatum(const string& filename, const int label,
 }
 #endif  // USE_OPENCV
 
-bool ReadFileToDatum(const string& filename, const int label,
+bool ReadFileToDatum(const string& filename, const float label,
     Datum* datum) {
   std::streampos size;
 

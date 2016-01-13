@@ -71,9 +71,9 @@ int main(int argc, char** argv) {
   const string encode_type = FLAGS_encode_type;
 
   std::ifstream infile(argv[2]);
-  std::vector<std::pair<std::string, int> > lines;
+  std::vector<std::pair<std::string, float> > lines;
   std::string filename;
-  int label;
+  float label;
   while (infile >> filename >> label) {
     lines.push_back(std::make_pair(filename, label));
   }
