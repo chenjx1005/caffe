@@ -31,6 +31,71 @@ void caffe_cpu_gemm<double>(const CBLAS_TRANSPOSE TransA,
       ldb, beta, C, N);
 }
 
+template<typename Dtype>
+void caffe_cpu_csrgemm(const CBLAS_TRANSPOSE TransA,
+    const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K, 
+    const Dtype alpha, const Dtype* A, const Dtype* indices, const Dtype* ptr,
+    const Dtype* B, const Dtype beta, Dtype* C) {
+  caffe_scal(M * N, beta, C);
+  if (TransA == CblasNoTrans) {
+    if (TransB == CblasNoTrans) {
+      for (int rowA = 0; rowA < M; rowA++) {
+        const int begin = static_cast<int>(ptr[rowA]);
+        const int end = static_cast<int>(ptr[rowA + 1]);
+        Dtype* CrowA = C + (N * rowA);
+        for (int pos = begin; pos < end; pos++) {
+          const Dtype* BcolAN = B + (static_cast<int>(indices[pos]) * N);
+          const Dtype AatPos = alpha * A[pos];
+          caffe_axpy(N, AatPos, BcolAN, CrowA, 1, 1);
+        }
+      }
+    } else {
+      for (int rowA = 0; rowA < M; rowA++) {
+        const int begin = static_cast<int>(ptr[rowA]);
+        const int end = static_cast<int>(ptr[rowA + 1]);
+        Dtype* CrowA = C + (N * rowA);
+        for (int pos = begin; pos < end; pos++) {
+          const Dtype AatPos = alpha * A[pos];
+          const Dtype* BcolA = B + static_cast<int>(indices[pos]);
+          caffe_axpy(N, AatPos, BcolA, CrowA, K, 1);
+        }
+      }
+    }
+  } else {
+    if (TransB == CblasNoTrans) {
+      for (int colA = 0; colA < K; colA++) {
+        const int begin = static_cast<int>(ptr[colA]);
+        const int end = static_cast<int>(ptr[colA + 1]);
+        const Dtype* BColAN = B + (colA * N);
+        for (int pos = begin; pos < end; pos++) {
+          Dtype* CrowA = C + (N * static_cast<int>(indices[pos]));
+          caffe_axpy(N, A[pos] * alpha, BColAN, CrowA, 1, 1);
+        }
+      }
+    } else {
+      for (int colA = 0; colA < K; colA++) {
+        const int begin = static_cast<int>(ptr[colA]);
+        const int end = static_cast<int>(ptr[colA + 1]);
+        const Dtype* BColA = B + colA;
+        for (int pos = begin; pos < end; pos++) {
+          Dtype* CrowA = C + (N * static_cast<int>(indices[pos]));
+          caffe_axpy(N, A[pos] * alpha, BColA, CrowA, K, 1);
+        }
+      }
+    }
+  }
+}
+
+template void caffe_cpu_csrgemm<float>(const CBLAS_TRANSPOSE TransA,
+    const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K, 
+    const float alpha, const float* A, const float* indices, const float* ptr,
+    const float* B, const float beta, float* C);
+
+template void caffe_cpu_csrgemm<double>(const CBLAS_TRANSPOSE TransA,
+    const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K, 
+    const double alpha, const double* A, const double* indices, const double* ptr,
+    const double* B, const double beta, double* C);
+
 template <>
 void caffe_cpu_gemv<float>(const CBLAS_TRANSPOSE TransA, const int M,
     const int N, const float alpha, const float* A, const float* x,
@@ -47,11 +112,15 @@ void caffe_cpu_gemv<double>(const CBLAS_TRANSPOSE TransA, const int M,
 
 template <>
 void caffe_axpy<float>(const int N, const float alpha, const float* X,
-    float* Y) { cblas_saxpy(N, alpha, X, 1, Y, 1); }
+    float* Y, const int ldx, const int ldy) {
+  cblas_saxpy(N, alpha, X, ldx, Y, ldy); 
+}
 
 template <>
 void caffe_axpy<double>(const int N, const double alpha, const double* X,
-    double* Y) { cblas_daxpy(N, alpha, X, 1, Y, 1); }
+    double* Y, const int ldx, const int ldy) {
+  cblas_daxpy(N, alpha, X, ldx, Y, ldy); 
+}
 
 template <typename Dtype>
 void caffe_set(const int N, const Dtype alpha, Dtype* Y) {

@@ -306,7 +306,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 145 (last added: crop_param)
+// LayerParameter next available layer-specific ID: 146 (last added: sparse_inner_product_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -395,6 +395,7 @@ message LayerParameter {
   optional ScaleParameter scale_param = 142;
   optional SigmoidParameter sigmoid_param = 124;
   optional SoftmaxParameter softmax_param = 125;
+  optional SparseInnerProductParameter sparse_inner_product_param = 146;
   optional SPPParameter spp_param = 132;
   optional SliceParameter slice_param = 126;
   optional TanHParameter tanh_param = 127;
@@ -1174,6 +1175,17 @@ message SPPParameter {
     CUDNN = 2;
   }
   optional Engine engine = 6 [default = DEFAULT];
+}
+
+message SparseInnerProductParameter {
+  optional uint32 num_output = 1; // The number of outputs for the layer
+  optional bool bias_term = 2 [default = true]; // whether to have bias terms
+  optional FillerParameter weight_filler = 3; // The filler for the weight
+  optional FillerParameter bias_filler = 4; // The filler for the bias
+  optional uint32 input_dim = 5; // The column size of the input sparse matrix.
+  
+  // In SparseInnerProductLayer, transpose is always true for simplicity.
+  // That is, the shape of the weight is always input_dim * num_output.
 }
 
 // DEPRECATED: use LayerParameter.

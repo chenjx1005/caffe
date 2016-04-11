@@ -1,0 +1,27 @@
+name: 'sparse_fc_net'
+force_backward: true
+layer {
+  type: 'Input'
+  name: 'value'
+  top: 'value'
+  top: 'indices'
+  top: 'ptr'
+  input_param {
+    shape: { dim: 6 }
+    shape: { dim: 6 }
+    shape: { dim: 4 }
+  }
+}
+layer {
+  type: 'SparseInnerProduct'
+  name: 'spfc'
+  top: 'spfc'
+  bottom: 'value'
+  bottom: 'indices'
+  bottom: 'ptr'
+  sparse_inner_product_param {
+    num_output: 5
+    input_dim: 10
+    weight_filler { type: 'xavier' }
+  }
+}
