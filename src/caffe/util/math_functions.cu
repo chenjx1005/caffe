@@ -8,6 +8,8 @@
 #include "caffe/common.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#define THREADS_PER_BLOCK_CSR 32
+
 namespace caffe {
 
 template <>
@@ -413,6 +415,185 @@ void caffe_gpu_rng_gaussian(const int n, const double mu, const double sigma,
                             double* r) {
   CURAND_CHECK(
       curandGenerateNormalDouble(Caffe::curand_generator(), r, n, mu, sigma));
+}
+
+template<typename Dtype>
+__device__ void caffe_gpu_csr_gemm_kernel_core(const int M, const int N,
+                                               const int K, const Dtype alpha,
+                                               int nzz, const Dtype* A,
+                                               const Dtype* indices,
+                                               const Dtype* ptr, const Dtype* B,
+                                               const int ldb1, const int ldb2,
+                                               const Dtype beta, Dtype* C,
+                                               const int ldc1, const int ldc2) {
+  __shared__ volatile Dtype sums[THREADS_PER_BLOCK_CSR * 2];
+
+  for (int rowA = blockIdx.x; rowA < M; rowA += gridDim.x) {
+    const int begin = static_cast<int>(ptr[rowA]);
+    const int end = static_cast<int>(ptr[rowA + 1]);
+    const int offset_c_part = rowA * ldc1;
+    for (int colC = blockIdx.y; colC < N; colC += gridDim.y) {
+      Dtype sum = 0.0;
+      const int offset_b_part = colC * ldb2;
+      for (int pos = begin + threadIdx.x; pos < end; pos +=
+          THREADS_PER_BLOCK_CSR) {
+        const int colA = static_cast<int>(indices[pos]);
+        sum += A[pos] * B[colA * ldb1 + offset_b_part];
+      }
+      sums[threadIdx.x] = sum;
+      __syncthreads();
+
+      /* hardcoded reduction for 32 threads */
+      sums[threadIdx.x] += sums[threadIdx.x + 16];
+      sums[threadIdx.x] += sums[threadIdx.x + 8];
+      sums[threadIdx.x] += sums[threadIdx.x + 4];
+      sums[threadIdx.x] += sums[threadIdx.x + 2];
+      sums[threadIdx.x] += sums[threadIdx.x + 1];
+
+      if (threadIdx.x == 0) {
+        const int offsetC = offset_c_part + colC * ldc2;
+        C[offsetC] = beta * C[offsetC] + alpha * sums[0];
+      }
+    }
+  }
+}
+
+template<typename Dtype>
+__global__ void caffe_gpu_csr_gemm_kernel(const CBLAS_TRANSPOSE TransB,
+                                          const int M, const int N, const int K,
+                                          const Dtype alpha,
+                                          const Dtype* A, const Dtype* indices,
+                                          const Dtype* ptr, const Dtype* B,
+                                          const Dtype beta, Dtype* C,
+                                          const CBLAS_ORDER orderC) {
+  if (orderC == CblasRowMajor) {
+    if (TransB == CblasNoTrans) {
+      caffe_gpu_csr_gemm_kernel_core(M, N, K, alpha, static_cast<int>(ptr[M]), A, indices, ptr, B, N,
+                                     1, beta, C, N, 1);
+    } else {
+      caffe_gpu_csr_gemm_kernel_core(M, N, K, alpha, static_cast<int>(ptr[M]), A, indices, ptr, B, 1,
+                                     K, beta, C, N, 1);
+    }
+  } else {
+    if (TransB == CblasNoTrans) {
+      caffe_gpu_csr_gemm_kernel_core(M, N, K, alpha, static_cast<int>(ptr[K]), A, indices, ptr, B, N,
+                                     1, beta, C, 1, M);
+    } else {
+      caffe_gpu_csr_gemm_kernel_core(M, N, K, alpha, static_cast<int>(ptr[K]), A, indices, ptr, B, 1,
+                                     K, beta, C, 1, M);
+    }
+  }
+}
+
+template<typename Dtype>
+__device__ void caffe_gpu_csr_rank1_update_kernel_core(const int M, const int N,
+                                                       const Dtype alpha,
+                                                       const Dtype* A,
+                                                       const Dtype* indices,
+                                                       const Dtype* ptr,
+                                                       const Dtype* B, int ldb,
+                                                       Dtype* C, const int ldc1,
+                                                       const int ldc2) {
+  const int begin = static_cast<int>(ptr[0]);
+  const int end = static_cast<int>(ptr[1]);
+  for (int pos = blockIdx.x * blockDim.x + begin + threadIdx.x; pos < end;
+      pos += blockDim.x * gridDim.x) {
+    const Dtype valA = A[pos] * alpha;
+    const int offset_part = static_cast<int>(indices[pos]) * ldc1;
+    for (int colC = blockIdx.y * blockDim.y + threadIdx.y; colC < N;
+        colC += blockDim.y * gridDim.y) {
+      const int C_offset = offset_part + colC * ldc2;
+      C[C_offset] = C[C_offset] + B[colC * ldb] * valA;
+    }
+  }
+}
+
+// C = alpha A * B^T +  C where A and B are vectors.
+// A is a sprase vector and B is a dense vector
+template<typename Dtype>
+__device__ void caffe_gpu_csr_rank1_update_kernel(const int M, const int N,
+                                                  const Dtype alpha,
+                                                  const Dtype* A,
+                                                  const Dtype* indices,
+                                                  const Dtype* ptr,
+                                                  const Dtype* B, int ldb,
+                                                  Dtype* C,
+                                                  const CBLAS_ORDER orderC) {
+  if (orderC == CblasRowMajor) {
+    caffe_gpu_csr_rank1_update_kernel_core(M, N, alpha, A, indices, ptr, B, ldb,
+                                           C, N, 1);
+  } else {
+    caffe_gpu_csr_rank1_update_kernel_core(M, N, alpha, A, indices, ptr, B, ldb,
+                                           C, 1, M);
+  }
+}
+
+template<typename Dtype>
+__global__ void caffe_gpu_csr_rank1_update_kernel_multi(
+    const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
+    const Dtype alpha, const Dtype* A, const Dtype* indices, const Dtype* ptr,
+    const Dtype* B, int ldb, Dtype* C, const CBLAS_ORDER orderC) {
+  if (TransB == CblasNoTrans) {
+    for (int i = 0; i < K; i++) {
+      caffe_gpu_csr_rank1_update_kernel(M, N, alpha, A, indices, ptr + i,
+                                        B + (N * i), 1, C, orderC);
+    }
+  } else {
+    for (int i = 0; i < K; i++) {
+      caffe_gpu_csr_rank1_update_kernel(M, N, alpha, A, indices, ptr + i, B + i,
+                                        K, C, orderC);
+    }
+  }
+}
+
+template<>
+void caffe_gpu_csrgemm<float>(const CBLAS_TRANSPOSE TransA,
+                               const CBLAS_TRANSPOSE TransB, const int M,
+                               const int N, const int K, const float alpha,
+                               const float* A, const float* indices,
+                               const float* ptr, const float* B, const float beta,
+                               float* C) {
+  if (TransA == CblasNoTrans) {
+    dim3 grids(M, N);
+    dim3 threads(THREADS_PER_BLOCK_CSR, 1);
+    caffe_gpu_csr_gemm_kernel<float><< <grids, threads>>>(TransB, M, N, K,
+        alpha, A, indices, ptr, B, beta, C, CblasRowMajor);
+  } else {
+    // scale C by beta
+    if (beta != 1.0) {
+      CUBLAS_CHECK(cublasSscal(Caffe::cublas_handle() , M * N, &beta, C, 1));
+    }
+    dim3 grids(1, N);
+    dim3 threads(64, 1);
+    caffe_gpu_csr_rank1_update_kernel_multi<float><< <grids, threads>>>(TransB,
+        M, N, K,
+        alpha, A, indices, ptr , B, 1, C, CblasRowMajor);
+  }
+}
+
+template<>
+void caffe_gpu_csrgemm<double>(const CBLAS_TRANSPOSE TransA,
+                                const CBLAS_TRANSPOSE TransB, const int M,
+                                const int N, const int K, const double alpha,
+                                const double* A, const double* indices,
+                                const double* ptr, const double* B,
+                                const double beta, double* C) {
+  if (TransA == CblasNoTrans) {
+    dim3 grids(M, N);
+    dim3 threads(THREADS_PER_BLOCK_CSR, 1);
+    caffe_gpu_csr_gemm_kernel<double><< <grids, threads>>> (TransB, M, N, K,
+        alpha, A, indices, ptr, B, beta, C, CblasRowMajor);
+  } else {
+    // scale C by beta
+    if (beta != 1.0) {
+      CUBLAS_CHECK(cublasDscal(Caffe::cublas_handle() , M * N, &beta, C, 1));
+    }
+    dim3 grids(1, N);
+    dim3 threads(64, 1);
+    caffe_gpu_csr_rank1_update_kernel_multi<double><< <grids, threads>>>(TransB,
+        M, N, K,
+        alpha, A, indices, ptr , B, 1, C, CblasRowMajor);
+  }
 }
 
 }  // namespace caffe

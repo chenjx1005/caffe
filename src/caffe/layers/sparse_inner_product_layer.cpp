@@ -105,6 +105,10 @@ void SparseInnerProductLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
   }
 }
 
+#ifdef CPU_ONLY
+STUB_GPU(SparseInnerProductLayer);
+#endif
+
 INSTANTIATE_CLASS(SparseInnerProductLayer);
 REGISTER_LAYER_CLASS(SparseInnerProduct);
 

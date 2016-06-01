@@ -7,6 +7,7 @@ indices = np.array([0, 2, 2, 0, 1, 2])
 data = np.array([1, 2, 3, 4, 5, 6])
 csr = csr_matrix((data, indices, indptr), shape=(3, 10)).toarray()
 
+caffe.set_mode_gpu()
 net = caffe.Net("sparse_net.prototxt", caffe.TRAIN)
 net.blobs['value'].data[...] = data
 net.blobs['indices'].data[...] = indices
